@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>个人每日记账</title>
+<style>
+:root {
+  --bg: #f5f6fa;
+  --card-bg: #ffffff;
+  --text: #2d3436;
+  --text-secondary: #636e72;
+  --border: #e0e4e8;
+  --primary: #4a6cf7;
+  --primary-light: #eef1ff;
+  --danger: #e74c3c;
+  --danger-light: #fdecea;
+  --success: #27ae60;
+  --warning: #f39c12;
+  --radius: 12px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.container { max-width: 860px; margin: 0 auto; }
+
+.header { text-align: center; margin-bottom: 28px; }
+.header h1 { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+.header .subtitle { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+
+.date-bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; margin-bottom: 24px; flex-wrap: nowrap;
+}
+.date-bar button {
+  width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card-bg); cursor: pointer; font-size: 18px; color: var(--text);
+  transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.date-bar button:hover { background: var(--primary-light); border-color: var(--primary); }
+.date-display {
+  font-size: 16px; font-weight: 600; text-align: center;
+  padding: 8px 12px; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 10px; cursor: pointer; transition: all 0.15s;
+  flex: 1; min-width: 0; max-width: 260px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.date-display:hover { border-color: var(--primary); }
+.today-btn { width: auto; padding: 0 16px; font-size: 13px; font-weight: 500; color: var(--primary); border-color: var(--primary); height: 40px; flex-shrink: 0; }
+.today-btn:hover { background: var(--primary); color: #fff; }
+
+.card {
+  background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 24px; margin-bottom: 20px;
+}
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.card-header h2 { font-size: 17px; font-weight: 600; }
+.card-header .count { font-size: 13px; color: var(--text-secondary); }
+
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+table th, table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+table th {
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+}
+table td { font-size: 15px; }
+table tbody tr { transition: background 0.1s; }
+table tbody tr:hover { background: #f8f9fc; }
+
+td input[type="text"], td input[type="number"] {
+  width: 100%; border: 1px solid transparent; background: transparent;
+  padding: 8px 10px; border-radius: 8px; font-size: 15px;
+  font-family: inherit; color: var(--text); transition: all 0.15s;
+}
+td input[type="text"]:focus, td input[type="number"]:focus {
+  outline: none; border-color: var(--primary); background: var(--primary-light);
+}
+td input[type="number"] { text-align: right; }
+
+.toggle-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer; font-size: 14px; user-select: none;
+}
+.toggle-track {
+  width: 52px; height: 28px; border-radius: 14px; background: #e0e4e8;
+  position: relative; transition: background 0.25s; flex-shrink: 0;
+}
+.toggle-track::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 22px; height: 22px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.25s;
+}
+.toggle-label input { display: none; }
+.toggle-label input:checked + .toggle-track { background: var(--primary); }
+.toggle-label input:checked + .toggle-track::after { transform: translateX(24px); }
+.toggle-text { font-size: 13px; color: var(--text-secondary); min-width: 24px; }
+
+.btn-delete {
+  width: 34px; height: 34px; border: none; background: transparent;
+  color: #b2bec3; font-size: 18px; cursor: pointer; border-radius: 8px;
+  transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+}
+.btn-delete:hover { background: var(--danger-light); color: var(--danger); }
+
+.summary-row td {
+  font-weight: 700; font-size: 16px; border-top: 2px solid var(--text);
+  border-bottom: none; padding-top: 16px;
+}
+.summary-row .summary-label { color: var(--text); }
+.summary-row .summary-amount { color: var(--danger); font-size: 18px; }
+.summary-row .summary-necessary { color: var(--primary); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 18px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card-bg); color: var(--text); font-size: 14px; font-weight: 500;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.btn:hover { background: var(--bg); border-color: #ccc; }
+.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn-primary:hover { background: #3d5bd9; border-color: #3d5bd9; }
+.btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn-danger:hover { background: #c0392b; }
+.btn-success { background: var(--success); color: #fff; border-color: var(--success); }
+.btn-success:hover { background: #1e8449; }
+
+.action-bar { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+.statistics { }
+.statistics .date-range {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.statistics .date-range input[type="date"] {
+  border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+  font-size: 14px; font-family: inherit; color: var(--text); background: var(--card-bg);
+}
+.statistics .date-range input[type="date"]:focus { outline: none; border-color: var(--primary); }
+.statistics .date-range span { color: var(--text-secondary); font-size: 14px; }
+.statistics .item-range {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.statistics .item-range select {
+  border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+  font-size: 14px; font-family: inherit; color: var(--text); background: var(--card-bg);
+  min-width: 140px; cursor: pointer;
+}
+.statistics .item-range select:focus { outline: none; border-color: var(--primary); }
+.statistics .item-range label { color: var(--text-secondary); font-size: 14px; }
+.statistics .item-range .quick-btn {
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px;
+  font-size: 13px; cursor: pointer; background: var(--card-bg); color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.statistics .item-range .quick-btn:hover { border-color: var(--primary); color: var(--primary); }
+.statistics .item-range .quick-btn.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.stat-result {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px; margin-top: 16px;
+}
+.stat-card { background: var(--bg); border-radius: 10px; padding: 16px; text-align: center; }
+.stat-card .stat-value { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+.stat-card .stat-label { font-size: 13px; color: var(--text-secondary); }
+.stat-card.total .stat-value { color: var(--danger); }
+.stat-card.necessary .stat-value { color: var(--primary); }
+.stat-card.unnecessary .stat-value { color: var(--text-secondary); }
+.stat-card.days .stat-value { color: var(--text); }
+.stat-card.item .stat-value { color: var(--warning); }
+.stat-card.item-count .stat-value { color: var(--success); }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background: #2d3436; color: #fff; padding: 12px 24px; border-radius: 10px;
+  font-size: 14px; font-weight: 500; z-index: 1000; opacity: 0;
+  transition: opacity 0.3s; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+
+
+.reminder-banner {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: #fff; padding: 14px 20px; border-radius: 10px; margin-bottom: 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 14px; font-weight: 500;
+}
+.reminder-banner button {
+  background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4);
+  color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-family: inherit; transition: background 0.15s;
+}
+.reminder-banner button:hover { background: rgba(255,255,255,0.4); }
+.reminder-banner.hidden { display: none; }
+
+/* Sync Panel */
+.sync-panel {
+  display: none; margin-top: 16px; padding: 16px;
+  background: var(--bg); border-radius: 10px;
+}
+.sync-panel.show { display: block; }
+.sync-panel label { font-size: 13px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px; }
+.sync-panel input[type="text"] {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: 8px; font-size: 14px; font-family: inherit; margin-bottom: 10px;
+}
+.sync-panel .hint { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.6; }
+.sync-status {
+  font-size: 13px; padding: 8px 12px; border-radius: 8px; margin-top: 10px; display: none;
+}
+
+@media (max-width: 600px) {
+  body { padding: 12px; }
+  .card { padding: 16px; }
+  table th, table td { padding: 8px 6px; font-size: 13px; }
+  td input[type="text"], td input[type="number"] { padding: 6px 4px; font-size: 13px; }
+  .stat-card .stat-value { font-size: 22px; }
+  .header h1 { font-size: 22px; }
+  .date-bar { gap: 6px; }
+  .date-bar button { width: 36px; height: 36px; font-size: 16px; }
+  .today-btn { height: 36px; padding: 0 10px; font-size: 12px; }
+  .date-display { font-size: 14px; padding: 8px 8px; }
+}
+</style>
+<script src="https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js"></script>
+<script>
+(function(){
+  try{
+    var beacon=new BeaconAction({
+      appkey:'0WEB06U85YBSLJNL',
+      versionCode:'1.0.0',
+      channelID:'share',
+      delay:1000,
+      sessionDuration:30*60*1000,
+      isOversea:false,
+      needReportRqdEvent:false
+    });
+    beacon.onDirectUserAction('preview_page_view',{
+      'url':location.href,
+      'referrer':document.referrer,
+      'title':document.title,
+      'sandbox_id':'48d163e93f9e493f87d6be68882e53c6'
+    });
+  }catch(e){}
+})();
+</script></head>
+<body>
+
+<div class="container">
+  <div class="toast" id="toast"></div>
+
+  <div class="header">
+    <h1>💰 个人每日记账</h1>
+    <p class="subtitle">记录每一笔，掌握每一分 <span style="font-size:11px;color:#999;">v4</span></p>
+  </div>
+
+  <div class="reminder-banner hidden" id="reminderBanner">
+    <span>📢 现在是记账时间！别忘了记录今天的消费哦～</span>
+    <button onclick="dismissReminder()">知道了</button>
+  </div>
+
+  <div class="date-bar">
+    <button onclick="changeDate(-1)" title="前一天">◀</button>
+    <div class="date-display" id="dateDisplay" onclick="openDatePicker()"></div>
+    <button onclick="changeDate(1)" title="后一天">▶</button>
+    <button class="today-btn" onclick="goToToday()">📅 今天</button>
+  </div>
+
+  <div class="card" id="tableCard">
+    <div class="card-header">
+      <h2>📝 消费明细</h2>
+      <span class="count" id="entryCount">0 条记录</span>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40%">消费条目</th>
+            <th style="width:25%">金额 (¥)</th>
+            <th style="width:25%">有否必须</th>
+            <th style="width:10%"></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+        <tfoot id="tableFoot"></tfoot>
+      </table>
+    </div>
+    <div id="emptyState" class="empty-state">
+      <div class="icon">📋</div>
+      <p>今天还没有记录，点击下方按钮添加吧</p>
+    </div>
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="addRow()">＋ 添加条目</button>
+      <button class="btn" onclick="clearToday()">🗑 清空当日</button>
+      <button class="btn" onclick="exportCSV()">📥 导出 CSV</button>
+      <button class="btn btn-success" onclick="exportJSON()">☁️ 导出同步文件</button>
+      <button class="btn" onclick="document.getElementById('jsonImportInput').click()">📂 导入同步文件</button>
+      <input type="file" id="jsonImportInput" accept=".json" style="display:none" onchange="importJSON(event)">
+    </div>
+
+    <div class="sync-panel" id="syncPanel">
+      <label>☁️ 云端自动同步（已启用）</label>
+      <div class="hint">
+        💡 使用说明：<br>
+        1. 记账数据已自动同步到云端（jsonbin.io），无需手动设置密钥<br>
+        2. 记完账会自动上传；打开页面会自动从云端拉取<br>
+        3. 手机和电脑打开同一个链接，数据会自动保持一致<br>
+        4. 如需手动同步，可点下方「上传到云端」或「从云端加载」<br><br>
+        ✅ 换设备 / 清缓存都不会丢数据了
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="enableCloudSync()">☁️ 开启云端同步</button>
+        <button class="btn" onclick="cloudUpload()">上传到云端</button>
+        <button class="btn" onclick="cloudDownload()">从云端加载</button>
+      </div>
+      <div class="sync-status" id="syncStatus"></div>
+    </div>
+  </div>
+
+  <!-- 备注板块 -->
+  <div class="card" id="notesCard">
+    <div class="card-header">
+      <h2>📌 备注</h2>
+    </div>
+    <textarea id="notesArea" placeholder="在这里填写备注信息（如本月预算、特殊支出说明等）..." style="width:100%;min-height:90px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);resize:vertical;line-height:1.6;background:var(--bg);"></textarea>
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="saveNotes()">💾 保存备注</button>
+      <span class="count" id="notesHint" style="font-size:13px;color:var(--text-secondary);align-self:center;"></span>
+    </div>
+  </div>
+
+  <div class="card statistics">
+    <div class="card-header">
+      <h2>📊 区间统计</h2>
+    </div>
+    <div class="date-range">
+      <input type="date" id="startDate" onchange="calcStats()">
+      <span>至</span>
+      <input type="date" id="endDate" onchange="calcStats()">
+      <button class="btn btn-primary" onclick="calcStats()">查询统计</button>
+      <button class="btn btn-success" onclick="exportExcel()">📊 导出 Excel</button>
+    </div>
+    <div class="item-range">
+      <label>📦 条目统计：</label>
+      <select id="itemSelect" onchange="calcItemStats()">
+        <option value="">— 请选择条目 —</option>
+      </select>
+      <button class="quick-btn" data-days="7" onclick="quickRange(this)">近7天</button>
+      <button class="quick-btn" data-days="30" onclick="quickRange(this)">近1月</button>
+      <button class="quick-btn" data-days="90" onclick="quickRange(this)">近3月</button>
+      <button class="quick-btn" data-days="365" onclick="quickRange(this)">近1年</button>
+    </div>
+    <div class="stat-result" id="itemStatResult" style="display:none;"></div>
+    <div class="stat-result" id="statResult"></div>
+  </div>
+</div>
+
+<script>
+// ============ 数据层 ============
+const STORAGE_KEY = 'expense_tracker_data';
+
+function loadAllData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+
+function saveAllData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function getDateKey(date) {
+  const d = new Date(date);
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
+function getTodayKey() {
+  return getDateKey(new Date());
+}
+
+function getEntries(dateKey) {
+  return loadAllData()[dateKey] || [];
+}
+
+// 判断一个 key 是否是真实日期 key（排除 __note__ 备注前缀等元数据）
+function isRealDateKey(k) {
+  return k && typeof k === 'string' && !k.startsWith('__') && /^\d{4}-\d{2}-\d{2}$/.test(k);
+}
+
+// 获取所有真实日期 key（排除备注等元数据）
+function getRealDateKeys() {
+  const data = loadAllData();
+  return Object.keys(data).filter(isRealDateKey).sort();
+}
+
+function saveEntries(dateKey, entries) {
+  const data = loadAllData();
+  if (entries.length === 0) {
+    delete data[dateKey];
+  } else {
+    data[dateKey] = entries;
+  }
+  saveAllData(data);
+}
+
+// ============ 状态 ============
+let currentDate = new Date();
+let currentEntries = [];
+
+// ============ 渲染 ============
+function renderAll() {
+  currentEntries = getEntries(getDateKey(currentDate));
+  renderDateDisplay();
+  renderTable();
+  calcStats();
+  updateEmptyState();
+  checkReminder();
+  loadNotes();
+}
+
+function renderDateDisplay() {
+  const d = currentDate;
+  const today = new Date();
+  const isToday = getDateKey(d) === getDateKey(today);
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+  let label = d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 周' + weekdays[d.getDay()];
+  if (isToday) label += ' (今天)';
+  document.getElementById('dateDisplay').textContent = label;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  const tfoot = document.getElementById('tableFoot');
+  const countEl = document.getElementById('entryCount');
+  countEl.textContent = currentEntries.length + ' 条记录';
+  if (currentEntries.length === 0) {
+    tbody.innerHTML = '';
+    tfoot.innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = currentEntries.map((entry, i) => `
+    <tr>
+      <td><input type="text" value="${escapeHtml(entry.item)}" placeholder="例如：早餐"
+            onchange="updateEntry(${i},'item',this.value)"
+            onblur="updateEntry(${i},'item',this.value)"></td>
+      <td><input type="number" value="${entry.amount||''}" placeholder="0.00" step="0.01" min="0"
+            onchange="updateEntry(${i},'amount',parseFloat(this.value)||0)"
+            onblur="updateEntry(${i},'amount',parseFloat(this.value)||0)"></td>
+      <td>
+        <label class="toggle-label">
+          <input type="checkbox" ${entry.necessary?'checked':''} onchange="updateEntry(${i},'necessary',this.checked)">
+          <span class="toggle-track"></span>
+          <span class="toggle-text">${entry.necessary?'是':'否'}</span>
+        </label>
+      </td>
+      <td><button class="btn-delete" onclick="deleteRow(${i})" title="删除">✕</button></td>
+    </tr>
+  `).join('');
+
+  const total = currentEntries.reduce((s,e) => s + (e.amount||0), 0);
+  const necTotal = currentEntries.filter(e => e.necessary).reduce((s,e) => s + (e.amount||0), 0);
+  tfoot.innerHTML = `
+    <tr class="summary-row">
+      <td class="summary-label">📌 今日合计</td>
+      <td class="summary-amount">¥${total.toFixed(2)}</td>
+      <td><span class="summary-necessary">必须 ¥${necTotal.toFixed(2)}</span></td>
+      <td></td>
+    </tr>`;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function updateEmptyState() {
+  const emptyState = document.getElementById('emptyState');
+  const tableWrapper = document.querySelector('.table-wrapper');
+  if (!emptyState) return;
+  if (currentEntries.length === 0) {
+    emptyState.style.display = 'block';
+    if (tableWrapper) tableWrapper.style.display = 'none';
+  } else {
+    emptyState.style.display = 'none';
+    if (tableWrapper) tableWrapper.style.display = 'block';
+  }
+}
+
+// ============ 操作 ============
+function addRow() {
+  currentEntries.push({ item: '', amount: 0, necessary: false });
+  saveCurrent();
+  renderTable();
+  updateEmptyState();
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('#tableBody input[type="text"]');
+    const last = inputs[inputs.length - 1];
+    if (last) last.focus();
+  }, 50);
+}
+
+function deleteRow(i) {
+  if (!confirm('确定删除这条记录？')) return;
+  currentEntries.splice(i, 1);
+  saveCurrent();
+  renderAll();
+  showToast('已删除');
+}
+
+function updateEntry(i, field, val) {
+  currentEntries[i][field] = val;
+  saveCurrent();
+  renderTable();
+  calcStats();
+}
+
+function saveCurrent() {
+  saveEntries(getDateKey(currentDate), currentEntries);
+  scheduleAutoUpload();
+  refreshItemSelect();
+}
+
+// 自动上传云端（防抖 2 秒，避免连续输入时频繁请求）
+let autoUploadTimer = null;
+function scheduleAutoUpload() {
+  if (!cloudSyncEnabled) return;
+  clearTimeout(autoUploadTimer);
+  autoUploadTimer = setTimeout(function() {
+    cloudUpload(true);
+  }, 2000);
+}
+
+function clearToday() {
+  if (currentEntries.length === 0) { showToast('当日无记录'); return; }
+  if (!confirm('确定清空当日所有记录？不可撤销。')) return;
+  currentEntries = [];
+  saveCurrent();
+  renderAll();
+  showToast('已清空当日记录');
+}
+
+// ============ 日期导航 ============
+function changeDate(d) { currentDate.setDate(currentDate.getDate() + d); renderAll(); }
+function goToToday() { currentDate = new Date(); renderAll(); }
+function openDatePicker() {
+  const input = document.createElement('input');
+  input.type = 'date';
+  input.value = getDateKey(currentDate);
+  input.style.position = 'fixed';
+  input.style.top = '-1000px';
+  input.style.left = '-1000px';
+  input.style.opacity = '0';
+  input.style.width = '1px';
+  input.style.height = '1px';
+  input.onchange = function() {
+    if (this.value) {
+      currentDate = new Date(this.value + 'T00:00:00');
+      renderAll();
+    }
+    setTimeout(function() { input.remove(); }, 100);
+  };
+  document.body.appendChild(input);
+  if (typeof input.showPicker === 'function') {
+    try { input.showPicker(); return; } catch(e) {}
+  }
+  input.click();
+}
+
+// ============ 统计 ============
+function calcStats() {
+  const data = loadAllData();
+  const keys = getRealDateKeys();
+  const startInput = document.getElementById('startDate');
+  const endInput = document.getElementById('endDate');
+  const today = getTodayKey();
+  if (!startInput.value && keys.length) startInput.value = keys[0];
+  if (!endInput.value) endInput.value = today;
+  const start = startInput.value || today;
+  const end = endInput.value || today;
+  let total = 0, nec = 0, dayCount = 0;
+  for (const k of keys) {
+    if (k < start || k > end) continue;
+    const es = data[k] || [];
+    if (!es.length) continue;
+    dayCount++;
+    es.forEach(e => {
+      total += e.amount || 0;
+      if (e.necessary) nec += e.amount || 0;
+    });
+  }
+  document.getElementById('statResult').innerHTML = `
+    <div class="stat-card total"><div class="stat-value">¥${total.toFixed(2)}</div><div class="stat-label">总花费</div></div>
+    <div class="stat-card necessary"><div class="stat-value">¥${nec.toFixed(2)}</div><div class="stat-label">必须消费</div></div>
+    <div class="stat-card unnecessary"><div class="stat-value">¥${(total - nec).toFixed(2)}</div><div class="stat-label">非必须消费</div></div>
+    <div class="stat-card days"><div class="stat-value">${dayCount}</div><div class="stat-label">记账天数</div></div>`;
+  // 刷新条目下拉框（动态提取所有条目）
+  refreshItemSelect();
+}
+
+// ============ 条目统计 ============
+// 从所有数据中动态提取去重后的条目列表
+function getAllItems() {
+  const data = loadAllData();
+  const items = new Set();
+  getRealDateKeys().forEach(k => {
+    (data[k] || []).forEach(e => {
+      const name = (e.item || '').trim();
+      if (name) items.add(name);
+    });
+  });
+  return Array.from(items).sort();
+}
+
+// 刷新条目下拉框，保留当前选中项
+function refreshItemSelect() {
+  const sel = document.getElementById('itemSelect');
+  if (!sel) return;
+  const prev = sel.value;
+  const items = getAllItems();
+  let html = '<option value="">— 请选择条目 —</option>';
+  items.forEach(it => {
+    const selected = (it === prev) ? ' selected' : '';
+    html += `<option value="${escapeHtml(it)}"${selected}>${escapeHtml(it)}</option>`;
+  });
+  sel.innerHTML = html;
+  // 如果之前有选中项且仍存在，重新触发统计
+  if (prev && items.includes(prev)) {
+    calcItemStats();
+  }
+}
+
+// 快捷时间范围：近7天/近1月/近3月/近1年
+function quickRange(btn) {
+  const days = parseInt(btn.dataset.days, 10);
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - days + 1);
+  document.getElementById('startDate').value = getDateKey(start);
+  document.getElementById('endDate').value = getDateKey(end);
+  // 高亮当前按钮
+  document.querySelectorAll('.item-range .quick-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  calcStats();
+}
+
+// 统计选中条目在时间范围内的费用总和与次数
+function calcItemStats() {
+  const sel = document.getElementById('itemSelect');
+  const itemName = sel ? sel.value : '';
+  const resultEl = document.getElementById('itemStatResult');
+  if (!resultEl) return;
+
+  if (!itemName) {
+    resultEl.style.display = 'none';
+    return;
+  }
+
+  const data = loadAllData();
+  const keys = getRealDateKeys();
+  const startInput = document.getElementById('startDate');
+  const endInput = document.getElementById('endDate');
+  const today = getTodayKey();
+  if (!startInput.value && keys.length) startInput.value = keys[0];
+  if (!endInput.value) endInput.value = today;
+  const start = startInput.value || today;
+  const end = endInput.value || today;
+
+  let total = 0, count = 0, necTotal = 0;
+  const detailDays = [];
+  for (const k of keys) {
+    if (k < start || k > end) continue;
+    (data[k] || []).forEach(e => {
+      if ((e.item || '').trim() === itemName) {
+        total += e.amount || 0;
+        count++;
+        if (e.necessary) necTotal += e.amount || 0;
+        detailDays.push(k);
+      }
+    });
+  }
+
+  const uniqueDays = new Set(detailDays).size;
+  resultEl.style.display = 'grid';
+  resultEl.innerHTML = `
+    <div class="stat-card item"><div class="stat-value">¥${total.toFixed(2)}</div><div class="stat-label">「${escapeHtml(itemName)}」总费用</div></div>
+    <div class="stat-card item-count"><div class="stat-value">${count}</div><div class="stat-label">记录次数</div></div>
+    <div class="stat-card necessary"><div class="stat-value">¥${necTotal.toFixed(2)}</div><div class="stat-label">其中必须消费</div></div>
+    <div class="stat-card days"><div class="stat-value">${uniqueDays}</div><div class="stat-label">涉及天数</div></div>`;
+}
+
+// ============ 备注（按日期存储，并入云端同步）============
+// 备注存进主数据 expense_tracker_data，用 __note__ 前缀区分于记账条目
+const NOTES_PREFIX = '__note__';
+
+function getNotesKey() {
+  return NOTES_PREFIX + getDateKey(currentDate);
+}
+
+// 从主数据中读取当前日期的备注
+function loadNotes() {
+  const el = document.getElementById('notesArea');
+  const data = loadAllData();
+  el.value = data[getNotesKey()] || '';
+  updateNotesHint();
+}
+
+// 保存备注到主数据，并触发自动上传云端
+function saveNotes() {
+  const val = document.getElementById('notesArea').value;
+  const data = loadAllData();
+  if (val.trim()) {
+    data[getNotesKey()] = val;
+  } else {
+    delete data[getNotesKey()];
+  }
+  saveAllData(data);
+  updateNotesHint();
+  scheduleAutoUpload();
+  showToast('备注已保存（' + getDateKey(currentDate) + '）');
+}
+
+function updateNotesHint() {
+  const len = (document.getElementById('notesArea').value || '').length;
+  const hint = document.getElementById('notesHint');
+  hint.textContent = len ? ('已保存 ' + len + ' 字 · ' + getDateKey(currentDate)) : '';
+}
+
+// ============ 导出 ============
+function exportCSV() {
+  const data = loadAllData();
+  const keys = getRealDateKeys();
+  if (!keys.length) { showToast('没有数据'); return; }
+  let csv = '\uFEFF日期,消费条目,金额,有否必须\n';
+  keys.forEach(k => (data[k]||[]).forEach(e => {
+    csv += `${k},"${e.item||''}",${(e.amount||0).toFixed(2)},${e.necessary?'是':'否'}\n`;
+  }));
+  downloadFile('个人记账_' + getTodayKey() + '.csv', csv, 'text/csv;charset=utf-8');
+  showToast('CSV 导出成功');
+}
+
+function exportExcel() {
+  const data = loadAllData();
+  const keys = getRealDateKeys();
+  const startInput = document.getElementById('startDate');
+  const endInput = document.getElementById('endDate');
+  const today = getTodayKey();
+  const start = startInput.value || (keys.length ? keys[0] : today);
+  const end = endInput.value || today;
+  if (!keys.length) { showToast('没有数据'); return; }
+
+  let csv = '\uFEFF日期,消费条目,金额,当日合计\n';
+  let grandTotal = 0, hasData = false;
+  for (const k of keys) {
+    if (k < start || k > end) continue;
+    const es = data[k] || [];
+    if (!es.length) continue;
+    hasData = true;
+    const dayTotal = es.reduce((s, e) => s + (e.amount || 0), 0);
+    grandTotal += dayTotal;
+    es.forEach(e => {
+      const item = (e.item || '').replace(/"/g, '""');
+      csv += `${k},"${item}",${(e.amount || 0).toFixed(2)},${dayTotal.toFixed(2)}\n`;
+    });
+  }
+  if (!hasData) { showToast('该区间没有数据'); return; }
+  csv += '区间总计,,,' + grandTotal.toFixed(2) + '\n';
+  downloadFile('个人记账明细_' + start + '_至_' + end + '.csv', csv, 'text/csv;charset=utf-8');
+  showToast('Excel 导出成功');
+}
+
+function exportJSON() {
+  const data = loadAllData();
+  const keys = getRealDateKeys();
+  if (!keys.length) { showToast('没有数据'); return; }
+  const json = JSON.stringify(data, null, 2);
+  downloadFile('记账同步文件_' + getTodayKey() + '.json', json, 'application/json');
+  showToast('同步文件已下载！传到另一台设备后点击「导入」');
+}
+
+function downloadFile(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+
+  // 检测 iOS Safari（含 iPad 桌面模式）
+  const isIOS = (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (isIOS) {
+    // iOS Safari: 用 FileReader 转 Data URL，避免 Blob URL 导航崩溃
+    const reader = new FileReader();
+    reader.onloadend = function() {
+      const a = document.createElement('a');
+      a.href = reader.result;           // data:text/csv;charset=utf-8;base64,...
+      a.download = filename;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.style.display = 'none';
+      document.body.appendChild(a);      // 必须进 DOM 才能触发 click
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); }, 2000);
+    };
+    reader.readAsDataURL(blob);
+  } else {
+    // 桌面浏览器: Blob URL + DOM 追加 + 延迟 revoke
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 4000);
+  }
+}
+
+// ============ 导入 ============
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (typeof data !== 'object') throw new Error('格式错误');
+      // 合并数据：云端数据 + 本地数据，以日期为 key 合并
+      const local = loadAllData();
+      let added = 0, updated = 0;
+      for (const k of Object.keys(data)) {
+        // 备注（__note__ 前缀）直接覆盖
+        if (k.startsWith('__')) {
+          local[k] = data[k];
+          continue;
+        }
+        if (!local[k] || !local[k].length) {
+          local[k] = data[k];
+          added++;
+        } else {
+          // 合并去重（按条目内容+金额）
+          const existing = new Set(local[k].map(x => x.item + '|' + x.amount));
+          data[k].forEach(x => {
+            if (!existing.has(x.item + '|' + x.amount)) {
+              local[k].push(x);
+            }
+          });
+          updated++;
+        }
+      }
+      saveAllData(local);
+      renderAll();
+      showToast('✅ 导入成功！新增 ' + added + ' 天，更新 ' + updated + ' 天');
+    } catch(err) {
+      showToast('❌ 导入失败：' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ============ 云端同步（JSONBin.io，固定 Master Key + 固定 Bin ID）============
+// 使用固定 Master Key 与固定 Bin ID，手机/电脑两端访问同一份云端数据，实现稳定同步。
+const MASTER_KEY = '$2a$10$KbIrZe0STcmLbEtIqCSdH.I7JVCiVOs7ZP3ZxmlHc/szbF4MWXWr2';
+const BIN_ID = '6a9ebba9ffd5d16053e98086';
+let cloudSyncEnabled = true;
+
+function enableCloudSync() {
+  cloudSyncEnabled = true;
+  localStorage.setItem('et_sync_enabled', 'true');
+  showSyncStatus('✅ 云端同步已就绪（自动模式）', 'success');
+  cloudUpload();
+}
+
+// 上传：把本地数据 PUT 到固定 bin
+function cloudUpload(silent) {
+  const data = loadAllData();
+  const payload = {
+    updatedAt: new Date().toISOString(),
+    data: data
+  };
+  if (!silent) showSyncStatus('正在上传...', 'warning');
+  return fetch('https://api.jsonbin.io/v3/b/' + BIN_ID, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': MASTER_KEY
+    },
+    body: JSON.stringify(payload)
+  })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(() => {
+      cloudSyncEnabled = true;
+      localStorage.setItem('et_sync_enabled', 'true');
+      if (!silent) showSyncStatus('✅ 上传成功！手机和电脑数据已同步到云端。', 'success');
+      return true;
+    })
+    .catch(e => {
+      if (!silent) showSyncStatus('上传失败：' + e.message, 'error');
+      return false;
+    });
+}
+
+// 下载：从固定 bin 拉取，以云端为准覆盖本地（支持删除同步）
+function cloudDownload() {
+  showSyncStatus('正在从云端加载...', 'warning');
+  return fetch('https://api.jsonbin.io/v3/b/' + BIN_ID + '/latest', {
+    headers: { 'X-Master-Key': MASTER_KEY }
+  })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(res => {
+      const cloudData = (res && res.record && res.record.data) ? res.record.data : {};
+      if (typeof cloudData !== 'object') throw new Error('云端数据格式错误');
+      // 过滤掉元数据字段，保留真实记账数据 + 备注（__note__）
+      const cleanCloud = {};
+      let cloudDays = 0;
+      for (const k of Object.keys(cloudData)) {
+        if (k === '_init' || k === 'updatedAt') continue;
+        cleanCloud[k] = cloudData[k];
+        if (isRealDateKey(k)) cloudDays++;
+      }
+      // 以云端为准完全覆盖本地（新增、删除、修改都能正确同步）
+      // 因为自动上传防抖仅 2 秒，云端几乎总是最新的
+      saveAllData(cleanCloud);
+      renderAll();
+      cloudSyncEnabled = true;
+      localStorage.setItem('et_sync_enabled', 'true');
+      showSyncStatus('✅ 已从云端同步（覆盖 ' + cloudDays + ' 天）', 'success');
+      return true;
+    })
+    .catch(e => {
+      showSyncStatus('加载失败：' + e.message, 'error');
+      return false;
+    });
+}
+
+function showSyncStatus(msg, type) {
+  const el = document.getElementById('syncStatus');
+  el.style.display = 'block';
+  el.textContent = msg;
+  el.style.background = type === 'success' ? '#eafaf1' : type === 'warning' ? '#fef9e7' : '#fdecea';
+  el.style.color = type === 'success' ? '#27ae60' : type === 'warning' ? '#f39c12' : '#e74c3c';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ============ Toast ============
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ============ 提醒 ============
+function checkReminder() {
+  const now = new Date();
+  const h = now.getHours(), m = now.getMinutes();
+  const isTime = (h === 20 && m >= 50) || (h === 21 && m <= 30);
+  const todayEntries = getEntries(getTodayKey());
+  const banner = document.getElementById('reminderBanner');
+  if (isTime && todayEntries.length === 0) {
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
+function dismissReminder() {
+  document.getElementById('reminderBanner').classList.add('hidden');
+}
+
+// ============ 快捷键 ============
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 'Enter') { e.preventDefault(); addRow(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); changeDate(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); changeDate(1); }
+  }
+});
+
+// ============ 粘贴导入 & 数据迁移 ============
+function mergeData(data) {
+  const local = loadAllData();
+  let added = 0, updated = 0;
+  for (const k of Object.keys(data)) {
+    // 备注（__note__ 前缀）直接覆盖
+    if (k.startsWith('__')) {
+      local[k] = data[k];
+      continue;
+    }
+    if (!local[k] || !local[k].length) {
+      local[k] = data[k];
+      added++;
+    } else {
+      const existing = new Set(local[k].map(x => x.item + '|' + x.amount));
+      data[k].forEach(x => {
+        if (!existing.has(x.item + '|' + x.amount)) local[k].push(x);
+      });
+      updated++;
+    }
+  }
+  saveAllData(local);
+  renderAll();
+  return { added, updated };
+}
+
+function pasteImport() {
+  const text = document.getElementById('pasteImportArea').value.trim();
+  if (!text) { showToast('请先粘贴数据'); return; }
+  try {
+    const data = JSON.parse(text);
+    if (typeof data !== 'object') throw new Error('格式错误');
+    const { added, updated } = mergeData(data);
+    showToast('✅ 导入成功！新增 ' + added + ' 天，更新 ' + updated + ' 天');
+    document.getElementById('pasteImportArea').value = '';
+  } catch(err) {
+    showToast('❌ 导入失败：' + err.message);
+  }
+}
+
+// ============ 初始化 ============
+(function init() {
+  // 迁移旧版备注数据到新结构（一次性）
+  try {
+    const data = loadAllData();
+    let migrated = false;
+    // 1. 旧全局备注 expense_tracker_notes → __note__今天
+    const legacyNotes = localStorage.getItem('expense_tracker_notes');
+    if (legacyNotes && !data['__note__' + getTodayKey()]) {
+      data['__note__' + getTodayKey()] = legacyNotes;
+      localStorage.removeItem('expense_tracker_notes');
+      migrated = true;
+    }
+    // 2. 旧的按日期独立键 expense_tracker_notes_日期 → __note__日期
+    const allKeys = Object.keys(localStorage);
+    allKeys.forEach(k => {
+      if (k.indexOf('expense_tracker_notes_') === 0 && k !== 'expense_tracker_notes') {
+        const datePart = k.replace('expense_tracker_notes_', '');
+        if (!data['__note__' + datePart]) {
+          data['__note__' + datePart] = localStorage.getItem(k);
+        }
+        localStorage.removeItem(k);
+        migrated = true;
+      }
+    });
+    if (migrated) saveAllData(data);
+  } catch(e) {}
+
+  const today = getTodayKey();
+  const keys = getRealDateKeys();
+  if (keys.length) document.getElementById('startDate').value = keys[0];
+  document.getElementById('endDate').value = today;
+  renderAll();
+  setInterval(checkReminder, 60000);
+
+  // 云端同步：默认开启，启动时自动从云端拉取一次（静默）
+  cloudSyncEnabled = true;
+  localStorage.setItem('et_sync_enabled', 'true');
+  const syncKeyInput = document.getElementById('syncKeyInput');
+  if (syncKeyInput) {
+    syncKeyInput.placeholder = '已启用固定云端同步（无需输入密钥）';
+    syncKeyInput.disabled = true;
+  }
+  // 启动后延迟 1 秒自动同步云端（避免阻塞首屏）
+  setTimeout(function() {
+    cloudDownload().catch(function() {});
+  }, 1000);
+
+  // 检查 URL hash 中的迁移数据（从旧版自动跳转过来）
+  if (location.hash.startsWith('#migrate=')) {
+    try {
+      const raw = decodeURIComponent(location.hash.substring(9));
+      const migrateData = JSON.parse(raw);
+      if (typeof migrateData === 'object') {
+        const { added, updated } = mergeData(migrateData);
+        showToast('✅ 旧版数据迁移成功！新增 ' + added + ' 天，更新 ' + updated + ' 天');
+        history.replaceState(null, '', location.pathname);
+      }
+    } catch(e) {
+      showToast('❌ 迁移失败：' + e.message);
+    }
+  }
+})();
+</script>
+</body>
+</html>
