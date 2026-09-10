@@ -59,8 +59,8 @@ body {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .date-display:hover { border-color: var(--primary); }
-.today-btn { width: auto; padding: 0 16px; font-size: 13px; font-weight: 500; color: var(--primary); border-color: var(--primary); height: 40px; flex-shrink: 0; }
-.today-btn:hover { background: var(--primary); color: #fff; }
+.date-bar .today-btn { width: auto; padding: 0 16px; font-size: 13px; font-weight: 500; color: var(--primary); border-color: var(--primary); height: 40px; flex-shrink: 0; white-space: nowrap; }
+.date-bar .today-btn:hover { background: var(--primary); color: #fff; }
 
 .card {
   background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow);
@@ -181,6 +181,52 @@ td input[type="number"] { text-align: right; }
 .stat-card.item .stat-value { color: var(--warning); }
 .stat-card.item-count .stat-value { color: var(--success); }
 
+/* ===== 本轮记账标记条 ===== */
+.round-bar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 16px; margin-bottom: 20px;
+}
+.round-bar-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+.round-chk {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  font-size: 14px; user-select: none; color: var(--text); white-space: nowrap;
+}
+.round-chk input { display: none; }
+.round-chk-box {
+  width: 20px; height: 20px; border-radius: 5px; border: 1.5px solid #c9ced6;
+  background: var(--card-bg); position: relative; transition: all 0.15s; flex-shrink: 0;
+}
+.round-chk:hover .round-chk-box { border-color: var(--primary); }
+.round-chk input:checked + .round-chk-box { background: var(--primary); border-color: var(--primary); }
+.round-chk input:checked + .round-chk-box::after {
+  content: ''; position: absolute; left: 6px; top: 1px; width: 5px; height: 11px;
+  border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.round-mark-date { font-size: 12px; color: var(--text-secondary); margin-left: auto; white-space: nowrap; }
+
+/* ===== 本轮累计行 ===== */
+.summary-row.round-row td { border-top: 1px dashed var(--border); padding-top: 12px; }
+.round-row .summary-amount { color: var(--primary); }
+.round-row-label { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
+
+/* ===== 空记录提示行 ===== */
+.empty-row td { text-align: center; color: #b2bec3; font-size: 14px; padding: 30px 8px !important; }
+
+/* ===== 本轮统计卡片 ===== */
+.round-picker { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.round-picker label { font-size: 14px; color: var(--text-secondary); }
+.round-picker select {
+  border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+  font-size: 14px; font-family: inherit; color: var(--text); background: var(--card-bg);
+  min-width: 210px; cursor: pointer;
+}
+.round-picker select:focus { outline: none; border-color: var(--primary); }
+.round-hint-box {
+  display: none; font-size: 13px; line-height: 1.7; color: var(--text-secondary);
+  background: var(--bg); border-radius: 10px; padding: 14px 16px;
+}
+
 .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
 .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
 .empty-state p { font-size: 14px; }
@@ -234,8 +280,13 @@ td input[type="number"] { text-align: right; }
   .header h1 { font-size: 22px; }
   .date-bar { gap: 6px; }
   .date-bar button { width: 36px; height: 36px; font-size: 16px; }
-  .today-btn { height: 36px; padding: 0 10px; font-size: 12px; }
+  .date-bar .today-btn { height: 36px; padding: 0 10px; font-size: 12px; }
   .date-display { font-size: 14px; padding: 8px 8px; }
+  .round-bar { gap: 10px; padding: 10px 12px; }
+  .round-chk { font-size: 13px; }
+  .round-mark-date { margin-left: 0; width: 100%; text-align: right; }
+  .round-picker select { min-width: 0; width: 100%; }
+  .round-picker label { width: 100%; }
 }
 </style>
 <script src="https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js"></script>
@@ -267,7 +318,7 @@ td input[type="number"] { text-align: right; }
 
   <div class="header">
     <h1>💰 个人每日记账</h1>
-    <p class="subtitle">记录每一笔，掌握每一分 <span style="font-size:11px;color:#999;">v4</span></p>
+    <p class="subtitle">记录每一笔，掌握每一分 <span style="font-size:11px;color:#999;">v5</span></p>
   </div>
 
   <div class="reminder-banner hidden" id="reminderBanner">
@@ -280,6 +331,21 @@ td input[type="number"] { text-align: right; }
     <div class="date-display" id="dateDisplay" onclick="openDatePicker()"></div>
     <button onclick="changeDate(1)" title="后一天">▶</button>
     <button class="today-btn" onclick="goToToday()">📅 今天</button>
+  </div>
+
+  <div class="round-bar">
+    <span class="round-bar-title">🔄 本轮记账</span>
+    <label class="round-chk" title="把当前查看的这一天标记为本轮记账开始">
+      <input type="checkbox" id="chkRoundStart" onchange="toggleRoundMark('start', this.checked)">
+      <span class="round-chk-box"></span>
+      <span>本轮开始</span>
+    </label>
+    <label class="round-chk" title="把当前查看的这一天标记为本轮记账结束">
+      <input type="checkbox" id="chkRoundEnd" onchange="toggleRoundMark('end', this.checked)">
+      <span class="round-chk-box"></span>
+      <span>本轮结束</span>
+    </label>
+    <span class="round-mark-date" id="roundMarkDate"></span>
   </div>
 
   <div class="card" id="tableCard">
@@ -343,6 +409,21 @@ td input[type="number"] { text-align: right; }
       <button class="btn btn-primary" onclick="saveNotes()">💾 保存备注</button>
       <span class="count" id="notesHint" style="font-size:13px;color:var(--text-secondary);align-self:center;"></span>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>🔄 本轮统计</h2>
+      <span class="count" id="roundRangeLabel">未设置</span>
+    </div>
+    <div class="round-picker">
+      <label>查看轮次：</label>
+      <select id="roundSelect" onchange="onRoundSelectChange()">
+        <option value="-1">当前轮次</option>
+      </select>
+    </div>
+    <div class="stat-result" id="roundStatResult" style="display:none;"></div>
+    <div class="round-hint-box" id="roundHintBox"></div>
   </div>
 
   <div class="card statistics">
@@ -430,8 +511,11 @@ let currentEntries = [];
 function renderAll() {
   currentEntries = getEntries(getDateKey(currentDate));
   renderDateDisplay();
+  refreshRoundMarkers();
+  refreshRoundSelect();
   renderTable();
   calcStats();
+  renderRoundStats();
   updateEmptyState();
   checkReminder();
   loadNotes();
@@ -452,12 +536,11 @@ function renderTable() {
   const tfoot = document.getElementById('tableFoot');
   const countEl = document.getElementById('entryCount');
   countEl.textContent = currentEntries.length + ' 条记录';
+
   if (currentEntries.length === 0) {
-    tbody.innerHTML = '';
-    tfoot.innerHTML = '';
-    return;
-  }
-  tbody.innerHTML = currentEntries.map((entry, i) => `
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">📋 今天还没有记录，点击下方按钮添加吧</td></tr>';
+  } else {
+    tbody.innerHTML = currentEntries.map((entry, i) => `
     <tr>
       <td><input type="text" value="${escapeHtml(entry.item)}" placeholder="例如：早餐"
             onchange="updateEntry(${i},'item',this.value)"
@@ -475,15 +558,37 @@ function renderTable() {
       <td><button class="btn-delete" onclick="deleteRow(${i})" title="删除">✕</button></td>
     </tr>
   `).join('');
+  }
 
   const total = currentEntries.reduce((s,e) => s + (e.amount||0), 0);
   const necTotal = currentEntries.filter(e => e.necessary).reduce((s,e) => s + (e.amount||0), 0);
+
+  // 本轮累计（跟随「查看轮次」下拉框；未设置轮次时归零并提示）
+  const rounds = getRounds();
+  const active = getActiveRound(rounds);
+  let roundTotal = 0;
+  let roundLabel = '';
+  if (active) {
+    const r = calcRound(active);
+    roundTotal = r.total;
+    roundLabel = '第 ' + active.index + ' 轮 ' + fmtMD(r.start) + ' – ' + fmtMD(r.end) + (r.ongoing ? '（进行中）' : '（已结束）');
+  } else if (rounds.length) {
+    roundLabel = '上一轮已结束，合计归零，等待新一轮开始';
+  } else {
+    roundLabel = '尚未设置记账轮次（翻到某天勾选「本轮开始」）';
+  }
+
   tfoot.innerHTML = `
     <tr class="summary-row">
       <td class="summary-label">📌 今日合计</td>
       <td class="summary-amount">¥${total.toFixed(2)}</td>
       <td><span class="summary-necessary">必须 ¥${necTotal.toFixed(2)}</span></td>
       <td></td>
+    </tr>
+    <tr class="summary-row round-row">
+      <td class="summary-label">🔄 本轮累计</td>
+      <td class="summary-amount">¥${roundTotal.toFixed(2)}</td>
+      <td colspan="2"><span class="round-row-label">${roundLabel}</span></td>
     </tr>`;
 }
 
@@ -494,16 +599,11 @@ function escapeHtml(s) {
 }
 
 function updateEmptyState() {
+  // 表格始终可见：无记录时 tbody 用一行占位提示，底部仍保留「今日合计 / 本轮累计」
   const emptyState = document.getElementById('emptyState');
   const tableWrapper = document.querySelector('.table-wrapper');
-  if (!emptyState) return;
-  if (currentEntries.length === 0) {
-    emptyState.style.display = 'block';
-    if (tableWrapper) tableWrapper.style.display = 'none';
-  } else {
-    emptyState.style.display = 'none';
-    if (tableWrapper) tableWrapper.style.display = 'block';
-  }
+  if (tableWrapper) tableWrapper.style.display = 'block';
+  if (emptyState) emptyState.style.display = 'none';
 }
 
 // ============ 操作 ============
@@ -708,6 +808,176 @@ function calcItemStats() {
     <div class="stat-card days"><div class="stat-value">${uniqueDays}</div><div class="stat-label">涉及天数</div></div>`;
 }
 
+// ============ 本轮记账（轮次标记 + 本轮统计）============
+// 轮次标记以 __roundStart__ / __roundEnd__ 前缀存进主数据，
+// 与 __note__ 一样属于元数据：不参与「真实日期」统计，但会随云端自动同步。
+const ROUND_START_PREFIX = '__roundStart__';
+const ROUND_END_PREFIX = '__roundEnd__';
+
+// 当前正在查看的轮次索引，-1 表示「当前轮次」（自动取最近一个进行中的轮）
+let selectedRoundIdx = -1;
+
+// 把 2026-09-01 显示成 9/1
+function fmtMD(dateStr) {
+  if (!dateStr) return '';
+  const p = String(dateStr).split('-');
+  if (p.length < 3) return dateStr;
+  return parseInt(p[1], 10) + '/' + parseInt(p[2], 10);
+}
+
+// 扫描所有轮次标记，按「开始日升序」配成一轮轮：每轮找 ≥ 开始日的最小结束日
+function getRounds() {
+  const data = loadAllData();
+  const starts = [], ends = [];
+  Object.keys(data).forEach(function(k) {
+    if (k.indexOf(ROUND_START_PREFIX) === 0) {
+      starts.push(k.substring(ROUND_START_PREFIX.length));
+    } else if (k.indexOf(ROUND_END_PREFIX) === 0) {
+      ends.push(k.substring(ROUND_END_PREFIX.length));
+    }
+  });
+  starts.sort();
+  ends.sort();
+  const usedEnd = {};
+  const rounds = [];
+  starts.forEach(function(s) {
+    let matched = null;
+    for (let i = 0; i < ends.length; i++) {
+      const e = ends[i];
+      if (!usedEnd[e] && e >= s) { matched = e; usedEnd[e] = true; break; }
+    }
+    rounds.push({ index: rounds.length + 1, start: s, end: matched });
+  });
+  return rounds;
+}
+
+// 当前要展示的轮次：优先用户在下拉框里选中的轮次，否则取最近一个「进行中」的轮
+function getActiveRound(rounds) {
+  if (selectedRoundIdx >= 0 && rounds[selectedRoundIdx]) return rounds[selectedRoundIdx];
+  for (let i = rounds.length - 1; i >= 0; i--) {
+    if (!rounds[i].end) return rounds[i];
+  }
+  return null;
+}
+
+// 统计某一轮的花费（进行中的轮统计到「今天」为止）
+function calcRound(round) {
+  const data = loadAllData();
+  const keys = getRealDateKeys();
+  const start = round.start;
+  const end = round.end || getTodayKey();
+  let total = 0, nec = 0, days = 0;
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    if (k < start || k > end) continue;
+    const es = data[k] || [];
+    if (!es.length) continue;
+    days++;
+    es.forEach(function(e) {
+      total += e.amount || 0;
+      if (e.necessary) nec += e.amount || 0;
+    });
+  }
+  return { start: start, end: end, total: total, nec: nec, days: days, ongoing: !round.end };
+}
+
+// 刷新页面上「本轮开始 / 本轮结束」两个复选框的状态（跟随当前查看日期）
+function refreshRoundMarkers() {
+  const data = loadAllData();
+  const dk = getDateKey(currentDate);
+  const cs = document.getElementById('chkRoundStart');
+  const ce = document.getElementById('chkRoundEnd');
+  if (cs) cs.checked = !!data[ROUND_START_PREFIX + dk];
+  if (ce) ce.checked = !!data[ROUND_END_PREFIX + dk];
+  const lbl = document.getElementById('roundMarkDate');
+  if (lbl) lbl.textContent = '当前标记日期：' + dk;
+}
+
+// 勾选 / 取消勾选轮次标记
+function toggleRoundMark(type, checked) {
+  const dk = getDateKey(currentDate);
+  const key = (type === 'start' ? ROUND_START_PREFIX : ROUND_END_PREFIX) + dk;
+  const data = loadAllData();
+  if (checked) {
+    data[key] = true;
+  } else {
+    delete data[key];
+  }
+  saveAllData(data);
+  scheduleAutoUpload();
+  refreshRoundMarkers();
+  refreshRoundSelect();
+  renderTable();
+  renderRoundStats();
+  const what = type === 'start' ? '本轮开始' : '本轮结束';
+  showToast(checked ? ('✅ 已把 ' + dk + ' 标记为「' + what + '」') : ('已取消 ' + dk + ' 的「' + what + '」标记'));
+}
+
+// 刷新「查看轮次」下拉框，保留用户当前选择
+function refreshRoundSelect() {
+  const sel = document.getElementById('roundSelect');
+  if (!sel) return;
+  const rounds = getRounds();
+  let html = '<option value="-1">当前轮次</option>';
+  rounds.forEach(function(r, i) {
+    const range = r.end ? (fmtMD(r.start) + ' – ' + fmtMD(r.end)) : (fmtMD(r.start) + ' – 进行中');
+    html += '<option value="' + i + '">第 ' + r.index + ' 轮　' + range + '</option>';
+  });
+  sel.innerHTML = html;
+  if (selectedRoundIdx >= 0 && selectedRoundIdx < rounds.length) {
+    sel.value = String(selectedRoundIdx);
+  } else {
+    selectedRoundIdx = -1;
+    sel.value = '-1';
+  }
+}
+
+function onRoundSelectChange() {
+  const sel = document.getElementById('roundSelect');
+  const v = parseInt(sel.value, 10);
+  selectedRoundIdx = isNaN(v) ? -1 : v;
+  renderRoundStats();
+  renderTable();
+}
+
+// 渲染「本轮统计」卡片
+function renderRoundStats() {
+  const resultEl = document.getElementById('roundStatResult');
+  const hintEl = document.getElementById('roundHintBox');
+  const rangeEl = document.getElementById('roundRangeLabel');
+  if (!resultEl) return;
+
+  const rounds = getRounds();
+  const active = getActiveRound(rounds);
+
+  if (!active) {
+    resultEl.style.display = 'none';
+    if (hintEl) {
+      hintEl.style.display = 'block';
+      if (rounds.length) {
+        hintEl.innerHTML = '✅ 上一轮已结束（共 ' + rounds.length + ' 轮记录），合计已归零。<br>翻到新一轮开始的那一天，在上方勾选「本轮开始」，即可重新累计。也可用上方下拉框回看历史轮次。';
+      } else {
+        hintEl.innerHTML = '📌 还没有设置记账轮次。<br>翻到某一天，在上方勾选「本轮开始」即可开启本轮统计；本轮结束时在那天勾选「本轮结束」。';
+      }
+    }
+    if (rangeEl) rangeEl.textContent = rounds.length ? '等待新一轮' : '未设置';
+    return;
+  }
+
+  const r = calcRound(active);
+  if (hintEl) hintEl.style.display = 'none';
+  if (rangeEl) {
+    rangeEl.textContent = r.start + ' ~ ' + r.end + (r.ongoing ? '（进行中）' : '（已结束）');
+  }
+  const title = '第 ' + active.index + ' 轮';
+  resultEl.style.display = 'grid';
+  resultEl.innerHTML = `
+    <div class="stat-card total"><div class="stat-value">¥${r.total.toFixed(2)}</div><div class="stat-label">${title}总花费</div></div>
+    <div class="stat-card necessary"><div class="stat-value">¥${r.nec.toFixed(2)}</div><div class="stat-label">必须消费</div></div>
+    <div class="stat-card unnecessary"><div class="stat-value">¥${(r.total - r.nec).toFixed(2)}</div><div class="stat-label">非必须消费</div></div>
+    <div class="stat-card days"><div class="stat-value">${r.days}</div><div class="stat-label">本轮记账天数</div></div>`;
+}
+
 // ============ 备注（按日期存储，并入云端同步）============
 // 备注存进主数据 expense_tracker_data，用 __note__ 前缀区分于记账条目
 const NOTES_PREFIX = '__note__';
@@ -770,22 +1040,58 @@ function exportExcel() {
 
   let csv = '\uFEFF日期,消费条目,金额,当日合计\n';
   let grandTotal = 0, hasData = false;
+  let statTotal = 0, statNec = 0, statDays = 0;
   for (const k of keys) {
     if (k < start || k > end) continue;
     const es = data[k] || [];
     if (!es.length) continue;
     hasData = true;
+    statDays++;
     const dayTotal = es.reduce((s, e) => s + (e.amount || 0), 0);
     grandTotal += dayTotal;
     es.forEach(e => {
+      statTotal += e.amount || 0;
+      if (e.necessary) statNec += e.amount || 0;
       const item = (e.item || '').replace(/"/g, '""');
       csv += `${k},"${item}",${(e.amount || 0).toFixed(2)},${dayTotal.toFixed(2)}\n`;
     });
   }
   if (!hasData) { showToast('该区间没有数据'); return; }
   csv += '区间总计,,,' + grandTotal.toFixed(2) + '\n';
+
+  // ===== 任选区间统计汇总 =====
+  csv += '\n【区间统计】' + start + ' 至 ' + end + '\n';
+  csv += '总花费,' + statTotal.toFixed(2) + '\n';
+  csv += '必须消费,' + statNec.toFixed(2) + '\n';
+  csv += '非必须消费,' + (statTotal - statNec).toFixed(2) + '\n';
+  csv += '记账天数,' + statDays + '\n';
+
+  // ===== 条目统计汇总（若下拉框已选中某条目）=====
+  const itemSel = document.getElementById('itemSelect');
+  const itemName = itemSel ? itemSel.value : '';
+  if (itemName) {
+    let iTotal = 0, iCount = 0, iNec = 0;
+    const daySet = new Set();
+    for (const k of keys) {
+      if (k < start || k > end) continue;
+      (data[k] || []).forEach(e => {
+        if ((e.item || '').trim() === itemName) {
+          iTotal += e.amount || 0;
+          iCount++;
+          if (e.necessary) iNec += e.amount || 0;
+          daySet.add(k);
+        }
+      });
+    }
+    csv += '\n【条目统计】' + itemName + '\n';
+    csv += '总费用,' + iTotal.toFixed(2) + '\n';
+    csv += '记录次数,' + iCount + '\n';
+    csv += '其中必须消费,' + iNec.toFixed(2) + '\n';
+    csv += '涉及天数,' + daySet.size + '\n';
+  }
+
   downloadFile('个人记账明细_' + start + '_至_' + end + '.csv', csv, 'text/csv;charset=utf-8');
-  showToast('Excel 导出成功');
+  showToast('导出成功（含区间与条目统计）');
 }
 
 function exportJSON() {
