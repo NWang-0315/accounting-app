@@ -125,7 +125,7 @@ textarea:focus{outline:none;border-color:var(--primary)}
 
   <div class="header">
     <h1>📚 AI 每日学习打卡</h1>
-    <p class="subtitle">土木工程与用电安全 · 52周计划 <span style="font-size:11px;color:#999;">v1</span></p>
+    <p class="subtitle">土木工程与用电安全 · 48周计划 · 起算 <b id="startHint">—</b> <span style="font-size:11px;color:#999;">v2</span></p>
   </div>
 
   <div class="overview" id="overview"></div>
@@ -212,8 +212,10 @@ textarea:focus{outline:none;border-color:var(--primary)}
       <button class="btn" onclick="exportBackup()">📥 导出备份</button>
       <button class="btn" onclick="document.getElementById('impFile').click()">📂 导入备份</button>
       <input type="file" id="impFile" accept=".json" style="display:none" onchange="importBackup(event)">
+      <button class="btn" onclick="resetAll()">🔄 从头开始</button>
     </div>
     <div class="hint" id="syncHint">数据自动同步到云端（jsonbin 私有 bin，与记账数据完全隔离）。手机电脑打开同一链接即可互通。</div>
+    <div class="hint">「从头开始」会清空全部打卡与复盘记录，清空前自动导出一份备份，并把清空状态同步到其它设备。</div>
   </div>
 </div>
 
@@ -229,17 +231,28 @@ let cloudSyncEnabled=true;
 
 const DF=PLAN.dayFields;
 const idx=f=>DF.indexOf(f);
-const I_DAY=idx('Day'),I_PLANWEEK=idx('周次'),I_PHASE=idx('阶段'),I_PHASE_NAME=idx('阶段名称'),
+const I_DAY=idx('Day'),I_REL=idx('相对日'),I_PLANWEEK=idx('周次'),I_PHASE=idx('阶段'),I_PHASE_NAME=idx('阶段名称'),
       I_DOMAIN=idx('领域'),I_THEME=idx('周主题'),I_TYPE=idx('日型'),I_CONTENT=idx('每日学习内容'),
       I_RESCODE=idx('资源代号'),I_RES=idx('指定资源'),I_CHAPTER=idx('章节或内容'),
       I_BOOKCH=idx('纸质教材具体章节'),I_URL=idx('视频或主资源网址'),I_PURL=idx('实践资料网址'),
       I_DATA=idx('数据代号'),I_MIN=idx('分钟分配'),I_OUT=idx('当日产出'),I_ACCEPT=idx('本周验收标准'),
-      I_HOURS=idx('必修小时'),I_RULE=idx('复习规则');
+      I_HOURS=idx('必修小时'),I_RULE=idx('复习规则'),I_BOOKMIN=idx('纸书分钟');
 
 function dv(v){return (typeof v==='number'&&v<0)?PLAN.dict[-v-1]:v}
 function dayAt(i){return PLAN.days[i].map(dv)}
 function dayByNo(n){return PLAN.days[n-1]?PLAN.days[n-1].map(dv):null}
 const TOTAL=PLAN.total;
+
+/* 视频逐节索引：按「周次 + 周内第几日」建索引 */
+const VF=PLAN.vidFields||[];
+const vi=f=>VF.indexOf(f);
+const VI_ID=vi('编号'),VI_WEEK=vi('周次'),VI_REL=vi('相对日'),VI_COURSE=vi('课程'),
+      VI_MOD=vi('模块'),VI_TITLE=vi('视频标题'),VI_MIN=vi('分钟'),VI_URL=vi('具体网址'),VI_USE=vi('用途');
+const VIDMAP={};
+(PLAN.videos||[]).forEach(v=>{const vd=v.map(dv);const k=vd[VI_WEEK]+'_'+vd[VI_REL];
+  (VIDMAP[k]=VIDMAP[k]||[]).push(vd)});
+function relOfDay(n){return (n-1)%7+1}
+function videosOf(n){const d=dayByNo(n);return d?(VIDMAP[d[I_PLANWEEK]+'_'+relOfDay(n)]||[]):[]}
 
 /* ================= 日期 ================= */
 function fmt(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -276,8 +289,9 @@ let viewDay=1;
 function renderOverview(){
   const done=requiredDone(),req=requiredTotal(),pct=req?Math.round(done/req*100):0;
   const lg=lag();
-  const lgCls=lg===0?'ok':(lg<=2?'warn':'bad');
-  const lgTxt=lg===0?'准时':'滞后 '+lg+' 天';
+  const left=1-dayOfDate(todayStr());          // 距起算日还有几天
+  const lgCls=left>0?'pri':(lg===0?'ok':(lg<=2?'warn':'bad'));
+  const lgTxt=left>0?('距开营 '+left+' 天'):(lg===0?'准时':'滞后 '+lg+' 天');
   document.getElementById('overview').innerHTML=`
     <div class="ov pri"><div class="v">Day ${currentDay()}</div><div class="l">当前应学</div></div>
     <div class="ov"><div class="v">${pct}%</div><div class="l">必修完成率</div></div>
@@ -307,7 +321,7 @@ function renderDay(){
     <div class="kv"><div class="k">当日产出</div><div class="v">${esc(d[I_OUT])}</div></div>
     <div class="kv"><div class="k">验收标准</div><div class="v">${esc(d[I_ACCEPT])}</div></div>
     <div class="kv"><div class="k">复习规则</div><div class="v">${esc(d[I_RULE])}</div></div>
-    <div class="kv"><div class="k">必修时长</div><div class="v">${d[I_HOURS]?('<b>'+d[I_HOURS]+' 小时</b>'):'<span style="color:#f39c12">弹性日（不计必修）</span>'}</div></div>`;
+    <div class="kv"><div class="k">必修时长</div><div class="v">${d[I_HOURS]?('<b>'+d[I_HOURS]+' 小时</b>（含纸书阅读约 '+esc(d[I_BOOKMIN]||0)+' 分钟）'):'<span style="color:#f39c12">弹性日（不计必修）</span>'}</div></div>`;
 
   const links=[];
   if(d[I_RES])links.push(['📕','指定资源',d[I_RES]+(d[I_BOOKCH]?(' · '+d[I_BOOKCH]):''),'']);
@@ -318,12 +332,19 @@ function renderDay(){
     const wd=w.map(dv);
     if(wd[5]&&wd[5]!==d[I_ACCEPT])links.push(['🎯','本周产出',wd[5],'']);
   }
+  const vids=videosOf(n);
+  vids.forEach(v=>links.push(['📺','配套视频 '+v[VI_ID],
+    v[VI_TITLE]+'（'+v[VI_COURSE]+' · '+v[VI_MOD]+' · '+v[VI_MIN]+' 分钟）',v[VI_URL]]));
   document.getElementById('matBody').innerHTML=links.length?links.map(l=>
     `<a class="link-item" ${l[3]?('href="'+esc(l[3])+'" target="_blank" rel="noopener"'):'href="javascript:void(0)"'}>
        <span class="ico">${l[0]}</span>
        <span class="lt">${esc(l[1])}：${esc(l[2])}${l[3]?`<div class="lu">${esc(l[3])}</div>`:''}</span>
        ${l[3]?'<span class="go">↗</span>':''}
      </a>`).join(''):'<div class="empty">这一天没有额外的资料入口</div>';
+  document.getElementById('matHint').innerHTML=vids.length
+    ?('🎬 本日配套视频 '+vids.length+' 条，合计约 '+vids.reduce((a,b)=>a+(parseFloat(b[VI_MIN])||0),0).toFixed(0)+
+      ' 分钟 · 用途：'+esc(vids.map(v=>v[VI_USE]).join('；')))
+    :'';
 
   // 打卡
   document.getElementById('doneBox').checked=!!r.done;
@@ -402,7 +423,7 @@ function markReview(cid,iv,pass){
 /* ================= 进度 ================= */
 function renderProgress(){
   const req=requiredTotal(),done=requiredDone(),pct=req?Math.round(done/req*100):0;
-  const hReq=1248,hDone=hoursRequiredDone(),act=hoursDone();
+  const hReq=PLAN.requiredHours||1152,hDone=hoursRequiredDone(),act=hoursDone();
   const el=Math.max(1,dayOfDate(todayStr()));
   const agg={};const order=[];
   for(let n=1;n<=TOTAL;n++){const d=dayByNo(n);const p=d[I_PHASE];
@@ -501,6 +522,30 @@ function importBackup(ev){
   rd.readAsText(f);ev.target.value='';
 }
 
+/* 从头开始：清空全部打卡/复盘/复习记录。
+   会先自动导出备份；写入 __resetAt__ 以便把「已清空」状态同步到其它设备。 */
+function resetAll(){
+  const all=loadAll();
+  const dayKeys=Object.keys(all).filter(k=>/^d\d+$/.test(k));
+  const sumKeys=Object.keys(all).filter(k=>k.indexOf('__sum__')===0);
+  const revKeys=Object.keys(all).filter(k=>k.indexOf('__rev__')===0||k.indexOf('__fail__')===0);
+  if(!dayKeys.length&&!sumKeys.length&&!revKeys.length){
+    showToast('当前没有任何打卡记录，已经是全新状态');return;
+  }
+  const msg='确认「从头开始」？\n\n'
+    +'· 清空打卡记录 '+dayKeys.length+' 天\n'
+    +'· 清空复盘 '+sumKeys.length+' 条\n'
+    +'· 清空复习进度 '+revKeys.length+' 项\n\n'
+    +'清空前会自动导出一份备份文件。\n清空后从 Day 1（'+PLAN.start+'）重新开始，并同步到其它设备。';
+  if(!confirm(msg))return;
+  exportBackup();
+  saveAll({_init:true,__resetAt__:todayStr()});
+  viewDay=1;                 // 视图回到 Day 1，避免停在被清空的那一天
+  renderAll();
+  cloudUpload(true);
+  showToast('✅ 已清空，从 Day 1（'+PLAN.start+'）重新开始');
+}
+
 /* ================= Toast ================= */
 let tt=null;
 function showToast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');
@@ -508,6 +553,7 @@ function showToast(m){const el=document.getElementById('toast');el.textContent=m
 
 /* ================= 初始化 ================= */
 (function(){
+  document.getElementById('startHint').textContent=PLAN.start;
   viewDay=currentDay();
   renderAll();
   setTimeout(()=>cloudDownload().catch(()=>{}),900);
