@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>AI每日学习打卡</title>
+<style>
+:root{
+  --bg:#f4f6fa; --card:#ffffff; --text:#2d3436; --sub:#636e72; --border:#e0e4e8;
+  --primary:#4a6cf7; --primary-light:#eef1ff; --danger:#e74c3c; --danger-light:#fdecea;
+  --success:#27ae60; --success-light:#eafaf1; --warn:#f39c12; --warn-light:#fef9e7;
+  --radius:12px; --shadow:0 2px 12px rgba(0,0,0,.06);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;padding:20px}
+.container{max-width:880px;margin:0 auto}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#2d3436;color:#fff;
+  padding:12px 24px;border-radius:10px;font-size:14px;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.header{text-align:center;margin-bottom:20px}
+.header h1{font-size:26px;font-weight:700}
+.header .subtitle{color:var(--sub);font-size:13px;margin-top:4px}
+
+.overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}
+.ov{background:var(--card);border-radius:var(--radius);padding:12px 14px;text-align:center;box-shadow:var(--shadow)}
+.ov .v{font-size:22px;font-weight:700;line-height:1.2}
+.ov .l{font-size:12px;color:var(--sub);margin-top:2px}
+.ov.warn .v{color:var(--warn)} .ov.ok .v{color:var(--success)} .ov.bad .v{color:var(--danger)}
+.ov.pri .v{color:var(--primary)}
+
+.date-bar{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px}
+.date-bar button{width:40px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--card);
+  cursor:pointer;font-size:18px;color:var(--text);transition:.15s;flex-shrink:0}
+.date-bar button:hover{background:var(--primary-light);border-color:var(--primary)}
+.date-display{font-size:15px;font-weight:600;text-align:center;padding:8px 12px;background:var(--card);
+  border:1px solid var(--border);border-radius:10px;flex:1;min-width:0;max-width:420px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.date-bar .today-btn{width:auto;padding:0 14px;font-size:13px;font-weight:500;color:var(--primary);
+  border-color:var(--primary);height:40px;white-space:nowrap}
+.date-bar .today-btn:hover{background:var(--primary);color:#fff}
+
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+.card-header h2{font-size:16px;font-weight:600}
+.tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
+.tag.p{background:var(--primary-light);color:var(--primary)}
+.tag.g{background:var(--success-light);color:var(--success)}
+.tag.a{background:var(--warn-light);color:var(--warn)}
+.tag.r{background:var(--danger-light);color:var(--danger)}
+.tag.n{background:#f1f2f6;color:var(--sub)}
+
+.kv{display:flex;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border);font-size:14px;line-height:1.65}
+.kv:last-child{border-bottom:none}
+.kv .k{flex-shrink:0;width:82px;color:var(--sub);font-size:13px;padding-top:1px}
+.kv .v{flex:1;min-width:0;word-break:break-word}
+.kv .v b{font-weight:600}
+.content-text{white-space:pre-wrap;line-height:1.75;font-size:14px}
+
+.link-list{display:flex;flex-direction:column;gap:8px}
+.link-item{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;background:var(--bg);border-radius:10px;
+  text-decoration:none;color:var(--text);font-size:13.5px;transition:.15s;line-height:1.55}
+.link-item:hover{background:var(--primary-light)}
+.link-item .ico{flex-shrink:0}
+.link-item .lt{flex:1;min-width:0;word-break:break-word}
+.link-item .lu{font-size:11.5px;color:var(--sub);word-break:break-all;margin-top:2px}
+.link-item .go{flex-shrink:0;color:var(--primary);font-size:13px}
+
+.check-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:14px;border-radius:10px;background:var(--bg);margin-bottom:12px}
+.chk{display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none;font-size:15px;font-weight:500}
+.chk input{display:none}
+.chk .box{width:24px;height:24px;border-radius:7px;border:2px solid #c9ced6;background:#fff;position:relative;transition:.15s;flex-shrink:0}
+.chk input:checked + .box{background:var(--success);border-color:var(--success)}
+.chk input:checked + .box::after{content:'';position:absolute;left:7px;top:2px;width:6px;height:12px;
+  border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+.stepper{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub)}
+.stepper input{width:66px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;font-size:14px;
+  font-family:inherit;text-align:center;color:var(--text)}
+.stepper input:focus{outline:none;border-color:var(--primary)}
+
+.stars{display:flex;gap:4px}
+.stars span{font-size:22px;cursor:pointer;color:#dfe3e8;transition:.12s;line-height:1}
+.stars span.on{color:var(--warn)}
+textarea{width:100%;min-height:120px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;
+  font-size:14px;font-family:inherit;color:var(--text);resize:vertical;line-height:1.7;background:var(--bg)}
+textarea:focus{outline:none;border-color:var(--primary)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:.15s}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn-primary:hover{background:#3d5bd9}
+.btn-success{background:var(--success);color:#fff;border-color:var(--success)}
+.btn-sm{padding:6px 12px;font-size:13px}
+.bar{height:9px;border-radius:6px;background:#e9ecf1;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:6px;background:var(--primary);transition:width .4s}
+.bar > i.g{background:var(--success)}
+
+.rv{padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--bg)}
+.rv .rh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.rv .rq{font-size:13.5px;line-height:1.6;margin-bottom:6px}
+.rv .rm{font-size:12px;color:var(--sub);line-height:1.6}
+.rv .ra{display:flex;gap:8px;margin-top:9px}
+.empty{text-align:center;color:var(--sub);font-size:13.5px;padding:22px 10px;line-height:1.7}
+.hint{font-size:12.5px;color:var(--sub);line-height:1.7;margin-top:8px}
+.hidden{display:none!important}
+@media (max-width:640px){
+  body{padding:10px}
+  .card{padding:14px}
+  .header h1{font-size:21px}
+  .ov .v{font-size:19px}
+  .kv .k{width:68px;font-size:12px}
+  .kv{font-size:13.5px}
+  .date-display{font-size:13.5px}
+  .date-bar button{width:36px;height:36px;font-size:16px}
+  .date-bar .today-btn{height:36px;padding:0 10px;font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="toast" id="toast"></div>
+
+  <div class="header">
+    <h1>📚 AI 每日学习打卡</h1>
+    <p class="subtitle">土木工程与用电安全 · 52周计划 <span style="font-size:11px;color:#999;">v1</span></p>
+  </div>
+
+  <div class="overview" id="overview"></div>
+
+  <div class="date-bar">
+    <button onclick="changeDay(-1)" title="前一天">◀</button>
+    <div class="date-display" id="dayDisplay" onclick="jumpToDay()"></div>
+    <button onclick="changeDay(1)" title="后一天">▶</button>
+    <button class="today-btn" onclick="goToCurrent()">📅 应学日</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>📝 今日学习任务</h2>
+      <span id="taskTags"></span>
+    </div>
+    <div id="taskBody"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>📎 学习资料与入口</h2></div>
+    <div class="link-list" id="matBody"></div>
+    <div class="hint" id="matHint"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>✅ 打卡与记录</h2>
+      <span class="tag n" id="checkState">未打卡</span>
+    </div>
+    <div class="check-row">
+      <label class="chk">
+        <input type="checkbox" id="doneBox" onchange="toggleDone(this.checked)">
+        <span class="box"></span>
+        <span id="doneLabel">今日任务已完成</span>
+      </label>
+      <div class="stepper">
+        <span>实际用时</span>
+        <input type="number" id="hoursInput" step="0.5" min="0" max="24" onchange="saveHours(this.value)">
+        <span>小时</span>
+      </div>
+    </div>
+    <div class="check-row" style="margin-bottom:0">
+      <div class="stepper" style="gap:10px">
+        <span>质量评分</span>
+        <span class="stars" id="stars"></span>
+      </div>
+      <span class="hint" style="margin:0" id="qualityHint"></span>
+    </div>
+    <div class="hint">评分口径：1 照抄 · 2 提示完成 · 3 独立正确 · 4 能迁移 · 5 完全掌握（个人记录，不代替阶段考核）</div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>🪞 今日学习总结 / 复盘</h2>
+      <span class="tag n" id="sumHint"></span>
+    </div>
+    <textarea id="sumArea" placeholder="今天学到了什么？哪里卡住了？错因是什么？明天怎么改？&#10;（建议写：① 核心收获 ② 遇到的问题与错因 ③ 未通过项与待补 ④ 明日计划）"></textarea>
+    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="saveSummary()">💾 保存复盘</button>
+      <button class="btn" onclick="fillTemplate()">📋 插入模板</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>🔁 今日复习（1 / 7 / 30 天）</h2>
+      <span class="tag n" id="reviewCount">0 张</span>
+    </div>
+    <div id="reviewBody"></div>
+    <div class="hint">复习卡按"完成当天"起算：次日 +1 天、+7 天、+30 天。超时未做的会持续显示。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>📊 整体进度</h2></div>
+    <div id="progressBody"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>☁️ 数据与同步</h2><span class="tag n" id="syncState">已启用</span></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="cloudUpload()">上传到云端</button>
+      <button class="btn" onclick="cloudDownload()">从云端加载</button>
+      <button class="btn" onclick="exportBackup()">📥 导出备份</button>
+      <button class="btn" onclick="document.getElementById('impFile').click()">📂 导入备份</button>
+      <input type="file" id="impFile" accept=".json" style="display:none" onchange="importBackup(event)">
+    </div>
+    <div class="hint" id="syncHint">数据自动同步到云端（jsonbin 私有 bin，与记账数据完全隔离）。手机电脑打开同一链接即可互通。</div>
+  </div>
+</div>
+
+<script src="plan_data.js"></script>
+<script>
+/* ================= 基础 ================= */
+const STORAGE_KEY='study_plan_data';
+const MASTER_KEY='$2a$10$KbIrZe0STcmLbEtIqCSdH.I7JVCiVOs7ZP3ZxmlHc/szbF4MWXWr2';
+const BIN_ID='6aa35459ac6210605abebfaa';
+const INTERVALS=[1,7,30];
+const KEY_START='__start__';
+let cloudSyncEnabled=true;
+
+const DF=PLAN.dayFields;
+const idx=f=>DF.indexOf(f);
+const I_DAY=idx('Day'),I_PLANWEEK=idx('周次'),I_PHASE=idx('阶段'),I_PHASE_NAME=idx('阶段名称'),
+      I_DOMAIN=idx('领域'),I_THEME=idx('周主题'),I_TYPE=idx('日型'),I_CONTENT=idx('每日学习内容'),
+      I_RESCODE=idx('资源代号'),I_RES=idx('指定资源'),I_CHAPTER=idx('章节或内容'),
+      I_BOOKCH=idx('纸质教材具体章节'),I_URL=idx('视频或主资源网址'),I_PURL=idx('实践资料网址'),
+      I_DATA=idx('数据代号'),I_MIN=idx('分钟分配'),I_OUT=idx('当日产出'),I_ACCEPT=idx('本周验收标准'),
+      I_HOURS=idx('必修小时'),I_RULE=idx('复习规则');
+
+function dv(v){return (typeof v==='number'&&v<0)?PLAN.dict[-v-1]:v}
+function dayAt(i){return PLAN.days[i].map(dv)}
+function dayByNo(n){return PLAN.days[n-1]?PLAN.days[n-1].map(dv):null}
+const TOTAL=PLAN.total;
+
+/* ================= 日期 ================= */
+function fmt(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function todayStr(){return fmt(new Date())}
+function parse(s){return new Date(s+'T00:00:00')}
+function dateOfDay(n){const d=parse(PLAN.start);d.setDate(d.getDate()+(n-1));return fmt(d)}
+function dayOfDate(ds){return Math.round((parse(ds)-parse(PLAN.start))/86400000)+1}
+const WEEKCN=['日','一','二','三','四','五','六'];
+function prettyDate(ds){const d=parse(ds);return (d.getMonth()+1)+'月'+d.getDate()+'日 周'+WEEKCN[d.getDay()]}
+
+/* ================= 数据层 ================= */
+function loadAll(){try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):{}}catch(e){return {}}}
+function saveAll(d){localStorage.setItem(STORAGE_KEY,JSON.stringify(d))}
+function rec(n){return loadAll()['d'+n]||{}}
+function setRec(n,o){const d=loadAll();if(o&&Object.keys(o).length)d['d'+n]=o;else delete d['d'+n];saveAll(d)}
+function getSum(n){return loadAll()['__sum__'+n]||''}
+function setSum(n,t){const d=loadAll();if(t&&t.trim())d['__sum__'+n]=t;else delete d['__sum__'+n];saveAll(d)}
+function getRev(k){return loadAll()['__rev__'+k]||{}}
+function setRev(k,o){const d=loadAll();if(o&&Object.keys(o).length)d['__rev__'+k]=o;else delete d['__rev__'+k];saveAll(d)}
+
+function doneCount(){let c=0;for(let n=1;n<=TOTAL;n++)if(rec(n).done)c++;return c}
+function requiredTotal(){let c=0;for(let n=1;n<=TOTAL;n++)if(dayByNo(n)[I_HOURS]>0)c++;return c}
+function requiredDone(){let c=0;for(let n=1;n<=TOTAL;n++)if(rec(n).done&&dayByNo(n)[I_HOURS]>0)c++;return c}
+function hoursDone(){let s=0;for(let n=1;n<=TOTAL;n++)if(rec(n).done)s+=(parseFloat(rec(n).hours)||0);return s}
+function hoursRequiredDone(){let s=0;for(let n=1;n<=TOTAL;n++)if(rec(n).done)s+=(dayByNo(n)[I_HOURS]||0);return s}
+function isFlex(n){return n%7===0}
+function skippable(n){return isFlex(n)&&dateOfDay(n)<todayStr()}
+function currentDay(){for(let n=1;n<=TOTAL;n++){if(!rec(n).done&&!skippable(n))return n}return TOTAL}
+function lag(){const e=dayOfDate(todayStr());const c=currentDay();const d=e-c;return d>0?d:0}
+
+/* ================= 渲染 ================= */
+let viewDay=1;
+
+function renderOverview(){
+  const done=requiredDone(),req=requiredTotal(),pct=req?Math.round(done/req*100):0;
+  const lg=lag();
+  const lgCls=lg===0?'ok':(lg<=2?'warn':'bad');
+  const lgTxt=lg===0?'准时':'滞后 '+lg+' 天';
+  document.getElementById('overview').innerHTML=`
+    <div class="ov pri"><div class="v">Day ${currentDay()}</div><div class="l">当前应学</div></div>
+    <div class="ov"><div class="v">${pct}%</div><div class="l">必修完成率</div></div>
+    <div class="ov"><div class="v">${done}/${req}</div><div class="l">必修日</div></div>
+    <div class="ov ${lgCls}"><div class="v" style="font-size:16px;padding-top:4px">${lgTxt}</div><div class="l">进度状态</div></div>
+    <div class="ov"><div class="v">${(hoursDone()).toFixed(1)}</div><div class="l">累计小时</div></div>`;
+}
+
+function renderDay(){
+  const n=viewDay,d=dayByNo(n);
+  const ds=dateOfDay(n),r=rec(n);
+  const isToday=ds===todayStr();
+  document.getElementById('dayDisplay').textContent=
+    '第 '+n+' / '+TOTAL+' 天 · '+prettyDate(ds)+(isToday?'（今天）':'');
+
+  const typeCls=d[I_TYPE]==='弹性复习'?'a':(d[I_TYPE]==='考核整合'?'g':(d[I_TYPE]==='项目实践'?'p':'n'));
+  document.getElementById('taskTags').innerHTML=
+    `<span class="tag ${typeCls}">${esc(d[I_TYPE])}</span>
+     <span class="tag n">W${esc(d[I_PLANWEEK])}</span>
+     <span class="tag p">${esc(d[I_PHASE])} ${esc(d[I_PHASE_NAME])}</span>
+     ${isToday?'<span class="tag g">今天</span>':''}`;
+
+  document.getElementById('taskBody').innerHTML=`
+    <div class="kv"><div class="k">周主题</div><div class="v"><b>${esc(d[I_THEME])}</b></div></div>
+    <div class="kv"><div class="k">学习内容</div><div class="v content-text">${esc(d[I_CONTENT])}</div></div>
+    <div class="kv"><div class="k">时间分配</div><div class="v">${esc(d[I_MIN])}</div></div>
+    <div class="kv"><div class="k">当日产出</div><div class="v">${esc(d[I_OUT])}</div></div>
+    <div class="kv"><div class="k">验收标准</div><div class="v">${esc(d[I_ACCEPT])}</div></div>
+    <div class="kv"><div class="k">复习规则</div><div class="v">${esc(d[I_RULE])}</div></div>
+    <div class="kv"><div class="k">必修时长</div><div class="v">${d[I_HOURS]?('<b>'+d[I_HOURS]+' 小时</b>'):'<span style="color:#f39c12">弹性日（不计必修）</span>'}</div></div>`;
+
+  const links=[];
+  if(d[I_RES])links.push(['📕','指定资源',d[I_RES]+(d[I_BOOKCH]?(' · '+d[I_BOOKCH]):''),'']);
+  if(d[I_URL])links.push(['🎬','主资源 / 视频',d[I_RES]||'资源入口',d[I_URL]]);
+  if(d[I_PURL]&&d[I_PURL]!==d[I_URL])links.push(['🧪','实践资料入口',(d[I_DATA]?(d[I_DATA]+' · '):'')+(d[I_RES]||''),d[I_PURL]]);
+  const w=PLAN.weeks[d[I_PLANWEEK]-1];
+  if(w){
+    const wd=w.map(dv);
+    if(wd[5]&&wd[5]!==d[I_ACCEPT])links.push(['🎯','本周产出',wd[5],'']);
+  }
+  document.getElementById('matBody').innerHTML=links.length?links.map(l=>
+    `<a class="link-item" ${l[3]?('href="'+esc(l[3])+'" target="_blank" rel="noopener"'):'href="javascript:void(0)"'}>
+       <span class="ico">${l[0]}</span>
+       <span class="lt">${esc(l[1])}：${esc(l[2])}${l[3]?`<div class="lu">${esc(l[3])}</div>`:''}</span>
+       ${l[3]?'<span class="go">↗</span>':''}
+     </a>`).join(''):'<div class="empty">这一天没有额外的资料入口</div>';
+
+  // 打卡
+  document.getElementById('doneBox').checked=!!r.done;
+  document.getElementById('doneLabel').textContent=isFlex(n)?'弹性日已处理（复习 / 补考 / 休息）':'今日任务已完成';
+  document.getElementById('checkState').textContent=r.done?('已打卡 '+(r.doneAt||'')):'未打卡';
+  document.getElementById('checkState').className='tag '+(r.done?'g':'n');
+  document.getElementById('hoursInput').value=(r.hours!==undefined&&r.hours!==null&&r.hours!=='')?r.hours:'';
+  renderStars(r.quality||0);
+
+  // 复盘
+  document.getElementById('sumArea').value=getSum(n);
+  const sl=getSum(n).length;
+  document.getElementById('sumHint').textContent=sl?('已写 '+sl+' 字'):'还没写';
+  document.getElementById('sumHint').className='tag '+(sl?'g':'n');
+}
+
+function renderStars(q){
+  let h='';for(let i=1;i<=5;i++)h+=`<span class="${i<=q?'on':''}" onclick="saveQuality(${i})">★</span>`;
+  document.getElementById('stars').innerHTML=h;
+  document.getElementById('qualityHint').textContent=q?('已评 '+q+' 分'):'未评分';
+}
+
+/* ================= 复习 ================= */
+const CARD_MAP={};
+PLAN.cards.forEach(c=>{const cd=c.map(dv);CARD_MAP[cd[0]]=cd});
+
+function dueReviews(){
+  const t=todayStr(),out=[];
+  for(const cd of Object.values(CARD_MAP)){
+    const cid=cd[0],origDay=parseInt(cd[1],10);
+    if(!origDay)continue;
+    const r=rec(origDay);
+    if(!r.done||!r.doneAt)continue;
+    const base=r.doneAt,rev=getRev(cid);
+    for(const iv of INTERVALS){
+      if(rev[iv])continue;
+      const d=parse(base);d.setDate(d.getDate()+iv);
+      const due=fmt(d);
+      if(due<=t)out.push({cardId:cid,origDay:origDay,interval:iv,due:due,overdue:Math.round((parse(t)-parse(due))/86400000)});
+    }
+  }
+  out.sort((a,b)=>a.due<b.due?-1:(a.due>b.due?1:0));
+  return out;
+}
+
+function renderReviews(){
+  const list=dueReviews();
+  document.getElementById('reviewCount').textContent=list.length+' 张';
+  document.getElementById('reviewCount').className='tag '+(list.length?'a':'n');
+  const el=document.getElementById('reviewBody');
+  if(!list.length){el.innerHTML='<div class="empty">今天没有到期的复习卡 🎉<br>完成打卡后，次日会自动生成第 1 档复习。</div>';return}
+  el.innerHTML=list.map(x=>{
+    const cd=CARD_MAP[x.cardId];if(!cd)return '';
+    return `<div class="rv">
+      <div class="rh"><span class="tag p">${esc(cd[0])}</span><span class="tag n">原 Day ${cd[1]}</span>
+        <span class="tag ${x.overdue>0?'r':'a'}">+${x.interval} 天${x.overdue>0?(' · 逾期 '+x.overdue+' 天'):''}</span></div>
+      <div class="rq"><b>${esc(cd[2])}</b></div>
+      <div class="rm">❓ ${esc(cd[3])}</div>
+      <div class="rm">📕 ${esc(cd[5]||'')} ${esc(cd[6]||'')}</div>
+      <details style="margin-top:6px"><summary style="font-size:12.5px;color:#636e72;cursor:pointer">查看参考任务</summary>
+        <div class="rm" style="margin-top:5px">${esc(cd[4]||'')}</div></details>
+      <div class="ra">
+        <button class="btn btn-sm btn-success" onclick="markReview('${esc(x.cardId)}',${x.interval},true)">✓ 通过</button>
+        <button class="btn btn-sm" onclick="markReview('${esc(x.cardId)}',${x.interval},false)">✗ 未通过</button>
+      </div></div>`}).join('');
+}
+
+function markReview(cid,iv,pass){
+  const rev=getRev(cid);
+  if(pass){rev[iv]=todayStr();setRev(cid,rev)}
+  else{const d=loadAll();const k='__fail__'+cid;d[k]=(d[k]||0)+1;saveAll(d)}
+  scheduleAutoUpload();renderReviews();
+  showToast(pass?'✅ 该复习已通过':'已记为未通过，稍后会再次提醒');
+}
+
+/* ================= 进度 ================= */
+function renderProgress(){
+  const req=requiredTotal(),done=requiredDone(),pct=req?Math.round(done/req*100):0;
+  const hReq=1248,hDone=hoursRequiredDone(),act=hoursDone();
+  const el=Math.max(1,dayOfDate(todayStr()));
+  const agg={};const order=[];
+  for(let n=1;n<=TOTAL;n++){const d=dayByNo(n);const p=d[I_PHASE];
+    if(!agg[p]){agg[p]={name:d[I_PHASE_NAME],req:0,done:0,hours:0,hDone:0};order.push(p)}
+    if(d[I_HOURS]>0){agg[p].req++;agg[p].hours+=d[I_HOURS];if(rec(n).done){agg[p].done++;agg[p].hDone+=d[I_HOURS]}}
+    else if(rec(n).done){}
+  }
+  document.getElementById('progressBody').innerHTML=`
+    <div class="kv"><div class="k">必修日进度</div><div class="v">
+      <div class="bar"><i class="g" style="width:${pct}%"></i></div>${done} / ${req} 天（${pct}%）</div></div>
+    <div class="kv"><div class="k">必修小时</div><div class="v">
+      <div class="bar"><i style="width:${Math.round(hDone/hReq*100)}%"></i></div>${hDone} / ${hReq} 小时（${Math.round(hDone/hReq*100)}%）</div></div>
+    <div class="kv"><div class="k">累计实际</div><div class="v">${act.toFixed(1)} 小时（含弹性时间）</div></div>
+    <div class="kv"><div class="k">日历进度</div><div class="v">第 ${el} / ${TOTAL} 天 · 起算 ${PLAN.start} · 预计完成 ${dateOfDay(TOTAL)}</div></div>
+    <div class="kv"><div class="k">进度状态</div><div class="v">${lag()===0?'<span style="color:#27ae60">✅ 准时，按计划推进</span>':'<span style="color:#e74c3c">⚠️ 滞后 '+lag()+' 天，任务已顺延</span>'}</div></div>
+    <div style="margin-top:14px"><div style="font-size:13px;color:#636e72;margin-bottom:8px">阶段进度</div>
+    ${order.map(p=>{const a=agg[p];const pp=a.req?Math.round(a.done/a.req*100):0;
+      return `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px">
+          <span><b>${esc(p)}</b> ${esc(a.name)}</span><span style="color:#636e72">${a.done}/${a.req} 天 · ${pp}%</span></div>
+        <div class="bar" style="margin:0"><i style="width:${pp}%" class="${pp>=100?'g':''}"></i></div></div>`}).join('')}
+    </div>`;
+}
+
+function renderAll(){
+  renderOverview();renderDay();renderReviews();renderProgress();
+}
+
+/* ================= 交互 ================= */
+function esc(s){const d=document.createElement('div');d.textContent=(s===undefined||s===null)?'':String(s);return d.innerHTML}
+function changeDay(d){const n=viewDay+d;if(n<1||n>TOTAL){showToast('已到计划边界');return}viewDay=n;renderAll();
+  window.scrollTo({top:0,behavior:'smooth'})}
+function goToCurrent(){viewDay=currentDay();renderAll();window.scrollTo({top:0,behavior:'smooth'})}
+function jumpToDay(){const v=prompt('跳转到第几天？（1–'+TOTAL+'）',viewDay);if(v===null)return;const n=parseInt(v,10);
+  if(isNaN(n)||n<1||n>TOTAL){showToast('请输入 1–'+TOTAL+' 之间的数字');return}viewDay=n;renderAll()}
+
+function toggleDone(v){
+  const r=rec(viewDay);
+  r.done=!!v;
+  r.doneAt=v?todayStr():'';
+  setRec(viewDay,r);scheduleAutoUpload();renderAll();
+  showToast(v?'✅ 已打卡！明天进入下一个 Day':'已取消打卡');
+}
+function saveHours(v){const r=rec(viewDay);const n=parseFloat(v);r.hours=isNaN(n)?'':n;setRec(viewDay,r);scheduleAutoUpload();renderAll()}
+function saveQuality(q){const r=rec(viewDay);r.quality=(r.quality===q)?0:q;setRec(viewDay,r);scheduleAutoUpload();renderAll()}
+function saveSummary(){setSum(viewDay,document.getElementById('sumArea').value);scheduleAutoUpload();renderAll();showToast('✅ 复盘已保存（第 '+viewDay+' 天）')}
+function fillTemplate(){
+  const t='【核心收获】\n1. \n\n【遇到的问题与错因】\n1. \n\n【未通过项 / 待补】\n1. \n\n【明日计划调整】\n1. ';
+  const a=document.getElementById('sumArea');
+  a.value=(a.value? a.value+'\n\n':'')+t;a.focus();
+}
+
+/* ================= 云端同步 ================= */
+let upTimer=null;
+function scheduleAutoUpload(){if(!cloudSyncEnabled)return;clearTimeout(upTimer);upTimer=setTimeout(()=>cloudUpload(true),2000)}
+function cloudUpload(silent){
+  const payload={updatedAt:new Date().toISOString(),data:loadAll()};
+  if(!silent)showToast('正在上传…');
+  return fetch('https://api.jsonbin.io/v3/b/'+BIN_ID,{method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},body:JSON.stringify(payload)})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+    .then(()=>{document.getElementById('syncState').textContent='已同步';document.getElementById('syncState').className='tag g';
+      if(!silent)showToast('✅ 已上传到云端');return true})
+    .catch(e=>{document.getElementById('syncState').textContent='同步失败';document.getElementById('syncState').className='tag r';
+      if(!silent)showToast('上传失败：'+e.message);return false});
+}
+function cloudDownload(){
+  return fetch('https://api.jsonbin.io/v3/b/'+BIN_ID+'/latest',{headers:{'X-Master-Key':MASTER_KEY}})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+    .then(res=>{
+      const cd=(res&&res.record&&res.record.data)?res.record.data:null;
+      if(!cd||typeof cd!=='object')throw new Error('云端无数据');
+      const clean={};for(const k of Object.keys(cd)){if(k==='_init'||k==='updatedAt')continue;clean[k]=cd[k]}
+      // 云端为空则不上覆盖（保护本地）
+      const keys=Object.keys(clean).filter(k=>k[0]==='d'||k.indexOf('__')===0);
+      if(!keys.length){showToast('云端暂无数据，已保留本地记录');return false}
+      saveAll(clean);renderAll();showToast('✅ 已从云端同步');return true})
+    .catch(e=>{showToast('加载失败：'+e.message);return false});
+}
+function exportBackup(){
+  const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),data:loadAll()},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='学习打卡备份_'+todayStr()+'.json';
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+  showToast('备份文件已导出');
+}
+function importBackup(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=e=>{try{
+    const o=JSON.parse(e.target.result);const data=o.data||o;
+    if(typeof data!=='object')throw new Error('格式错误');
+    const cur=loadAll();let n=0;
+    for(const k of Object.keys(data)){if(k==='_init'||k==='updatedAt')continue;if(!cur[k]){cur[k]=data[k];n++}}
+    saveAll(cur);renderAll();scheduleAutoUpload();showToast('✅ 导入完成，新增 '+n+' 项');
+  }catch(err){showToast('❌ 导入失败：'+err.message)}};
+  rd.readAsText(f);ev.target.value='';
+}
+
+/* ================= Toast ================= */
+let tt=null;
+function showToast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');
+  clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2600)}
+
+/* ================= 初始化 ================= */
+(function(){
+  viewDay=currentDay();
+  renderAll();
+  setTimeout(()=>cloudDownload().catch(()=>{}),900);
+})();
+</script>
+</body>
+</html>
